@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POISK GLOBAL - Investimentos Mundiais</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,255,0,0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0,255,136,0.1), transparent);
+            animation: brilho 6s linear infinite;
+        }
+        
+        @keyframes brilho {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .logo {
+            font-size: 5em;
+            font-weight: 900;
+            background: linear-gradient(45deg, #00ff88, #00ccff, #0066ff, #aa00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0,150,255,0.5);
+            margin-bottom: 10px;
+            position: relative;
+            letter-spacing: 5px;
+            animation: pulsar 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulsar {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+            100% { filter: brightness(1); }
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 1.3em;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+        
+        .live-badge {
+            display: inline-block;
+            background: #00ff88;
+            color: #000;
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            animation: piscar 1.5s infinite;
+        }
+        
+        @keyframes piscar {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .update-time {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid #00ff88;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,255,136,0.2);
+        }
+        
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: #00ff88;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        
+        .macro-bar {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            border: 1px solid #333;
+        }
+        
+        .macro-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .macro-label {
+            color: #888;
+        }
+        
+        .macro-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #00ff88;
+        }
+        
+        .indicadores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .ind-card {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+        
+        .ind-nome {
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        .ind-valor {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin: 5px 0;
+        }
+        
+        .positive-small { color: #00ff88; }
+        
+        .search-box {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border: 1px solid #333;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 15px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1em;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #00ff88;
+        }
+        
+        .search-btn {
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .search-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0,255,136,0.5);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .tab:hover {
+            background: #2a2a2a;
+            border-color: #00ff88;
+        }
+        
+        .tab.active {
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            color: #000;
+        }
+        
+        .section-title {
+            font-size: 2em;
+            margin: 40px 0 20px;
+            color: #00ff88;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .region-title {
+            font-size: 1.5em;
+            margin: 30px 0 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #333;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #00ff88;
+            box-shadow: 0 10px 30px rgba(0,255,136,0.2);
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-ticker {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #00ff88;
+        }
+        
+        .card-pais {
+            background: #2a2a2a;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+        
+        .card-nome {
+            color: #fff;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .card-setor {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        
+        .card-preco {
+            font-size: 2em;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        
+        .card-variacao {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .positive {
+            color: #00ff88;
+        }
+        
+        .negative {
+            color: #ff4444;
+        }
+        
+        .card-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+        
+        .card-info-item {
+            text-align: center;
+        }
+        
+        .card-info-label {
+            color: #888;
+            font-size: 0.8em;
+        }
+        
+        .card-info-value {
+            font-weight: 600;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .badge-info {
+            background: #00ccff;
+            color: #000;
+        }
+        
+        .table-container {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 20px;
+            overflow-x: auto;
+            margin: 30px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: 15px;
+            color: #00ff88;
+            border-bottom: 2px solid #333;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        tr:hover {
+            background: #2a2a2a;
+        }
+        
+        .rating-A { color: #00ff88; }
+        .rating-B { color: #ffaa00; }
+        
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .news-card {
+            background: linear-gradient(145deg, #1a2a3a, #0a1a2a);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #00ccff;
+        }
+        
+        .news-titulo {
+            font-size: 1.2em;
+            color: #00ff88;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .news-meta {
+            display: flex;
+            gap: 15px;
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 40px;
+            margin-top: 50px;
+            border-top: 1px solid #333;
+            background: #1a1a1a;
+            border-radius: 15px;
+        }
+        
+        .footer-logo {
+            font-size: 2em;
+            font-weight: 600;
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .footer-copy {
+            color: #666;
+            font-size: 1.1em;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🌍 POISK</div>
+            <div class="subtitle">BUSCADOR GLOBAL DE INVESTIMENTOS</div>
+            <div class="live-badge">🔴 AO VIVO • 60s</div>
+            <div class="update-time">Atualizado: {{ data }}</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value">{{ stats.acoes }}</div><div class="stat-label">AÇÕES</div></div>
+            <div class="stat-card"><div class="stat-value">{{ stats.paises }}</div><div class="stat-label">PAÍSES</div></div>
+            <div class="stat-card"><div class="stat-value">{{ stats.apis }}</div><div class="stat-label">APIs</div></div>
+            <div class="stat-card"><div class="stat-value">{{ stats.fiis }}</div><div class="stat-label">FIIs</div></div>
+        </div>
+
+        <div class="macro-bar">
+            <div class="macro-item"><span class="macro-label">Dólar:</span><span class="macro-value">R$ {{ "%.2f"|format(dolar) }}</span></div>
+            <div class="macro-item"><span class="macro-label">Bitcoin:</span><span class="macro-value">$ {{ "{:,.0f}".format(bitcoin) }}</span></div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('americas')">🌎 AMÉRICAS</div>
+            <div class="tab" onclick="showTab('europa')">🌍 EUROPA</div>
+            <div class="tab" onclick="showTab('asia')">🌏 ÁSIA</div>
+            <div class="tab" onclick="showTab('africa')">🌍 ÁFRICA</div>
+            <div class="tab" onclick="showTab('fiis')">🏢 FIIs</div>
+            <div class="tab" onclick="showTab('cdbs')">💰 CDBs</div>
+            <div class="tab" onclick="showTab('cripto')">₿ CRIPTO</div>
+            <div class="tab" onclick="showTab('noticias')">📰 NOTÍCIAS</div>
+        </div>
+
+        <!-- AMÉRICAS -->
+        <div id="americas" class="tab-content">
+            <h2 class="section-title">🌎 AMÉRICAS</h2>
+            <div class="cards-grid">
+                {% for acao in south_america[:8] %}
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-ticker">{{ acao.ticker }}</span>
+                        <span class="card-pais">{{ acao.bandeira }} {{ acao.pais }}</span>
+                    </div>
+                    <div class="card-nome">{{ acao.nome }}</div>
+                    <div class="card-setor">{{ acao.setor }}</div>
+                    <div class="card-preco">R$ {{ acao.preco }}</div>
+                    <div class="card-variacao {{ acao.variacao_class }}">{{ "%.2f"|format(acao.variacao) }}%</div>
+                </div>
+                {% endfor %}
+                {% for acao in north_america[:8] %}
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-ticker">{{ acao.ticker }}</span>
+                        <span class="card-pais">{{ acao.bandeira }} {{ acao.pais }}</span>
+                    </div>
+                    <div class="card-nome">{{ acao.nome }}</div>
+                    <div class="card-setor">{{ acao.setor }}</div>
+                    <div class="card-preco">$ {{ acao.preco }}</div>
+                    <div class="card-variacao {{ acao.variacao_class }}">{{ "%.2f"|format(acao.variacao) }}%</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- EUROPA -->
+        <div id="europa" class="tab-content" style="display: none;">
+            <h2 class="section-title">🌍 EUROPA</h2>
+            <div class="cards-grid">
+                {% for acao in europe %}
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-ticker">{{ acao.ticker }}</span>
+                        <span class="card-pais">{{ acao.bandeira }} {{ acao.pais }}</span>
+                    </div>
+                    <div class="card-nome">{{ acao.nome }}</div>
+                    <div class="card-setor">{{ acao.setor }}</div>
+                    <div class="card-preco">€ {{ acao.preco }}</div>
+                    <div class="card-variacao {{ acao.variacao_class }}">{{ "%.2f"|format(acao.variacao) }}%</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ÁSIA -->
+        <div id="asia" class="tab-content" style="display: none;">
+            <h2 class="section-title">🌏 ÁSIA</h2>
+            <div class="cards-grid">
+                {% for acao in asia %}
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-ticker">{{ acao.ticker }}</span>
+                        <span class="card-pais">{{ acao.bandeira }} {{ acao.pais }}</span>
+                    </div>
+                    <div class="card-nome">{{ acao.nome }}</div>
+                    <div class="card-setor">{{ acao.setor }}</div>
+                    <div class="card-preco">¥ {{ acao.preco }}</div>
+                    <div class="card-variacao {{ acao.variacao_class }}">{{ "%.2f"|format(acao.variacao) }}%</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ÁFRICA -->
+        <div id="africa" class="tab-content" style="display: none;">
+            <h2 class="section-title">🌍 ÁFRICA</h2>
+            <div class="cards-grid">
+                {% for acao in africa %}
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-ticker">{{ acao.ticker }}</span>
+                        <span class="card-pais">{{ acao.bandeira }} {{ acao.pais }}</span>
+                    </div>
+                    <div class="card-nome">{{ acao.nome }}</div>
+                    <div class="card-setor">{{ acao.setor }}</div>
+                    <div class="card-preco">R {{ acao.preco }}</div>
+                    <div class="card-variacao {{ acao.variacao_class }}">{{ "%.2f"|format(acao.variacao) }}%</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- FIIs -->
+        <div id="fiis" class="tab-content" style="display: none;">
+            <h2 class="section-title">🏢 FUNDOS IMOBILIÁRIOS</h2>
+            <div class="cards-grid">
+                {% for fii in fiis %}
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-ticker">{{ fii.ticker }}</span>
+                        <span class="badge badge-info">{{ fii.segmento }}</span>
+                    </div>
+                    <div class="card-nome">{{ fii.nome }}</div>
+                    <div class="card-preco">R$ {{ fii.preco }}</div>
+                    <div class="card-variacao {{ fii.variacao_class }}">{{ "%.2f"|format(fii.variacao) }}%</div>
+                    <div class="card-info-grid">
+                        <div><span class="card-info-label">DY:</span> {{ fii.dy }}</div>
+                        <div><span class="card-info-label">P/VP:</span> {{ fii.pvp }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- CDBs -->
+        <div id="cdbs" class="tab-content" style="display: none;">
+            <h2 class="section-title">💰 CDBs RECOMENDADOS</h2>
+            <div class="table-container">
+                <table>
+                    <tr><th>Banco</th><th>Taxa</th><th>Liquidez</th><th>Rating</th></tr>
+                    {% for cdb in cdbs %}
+                    <tr>
+                        <td><strong>{{ cdb.banco }}</strong></td>
+                        <td style="color:#00ff88;">{{ cdb.taxa }}</td>
+                        <td>{{ cdb.liquidez }}</td>
+                        <td>{{ cdb.rating }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- CRIPTO -->
+        <div id="cripto" class="tab-content" style="display: none;">
+            <h2 class="section-title">₿ CRIPTOMOEDAS</h2>
+            <div class="cards-grid">
+                {% for c in criptos %}
+                <div class="card">
+                    <div class="card-header"><span class="card-ticker">{{ c.ticker }}</span></div>
+                    <div class="card-nome">{{ c.nome }}</div>
+                    <div class="card-preco">$ {{ "{:,.0f}".format(bitcoin) if c.ticker == 'BTC' else '3,120' }}</div>
+                    <div class="positive">+2.3%</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- NOTÍCIAS -->
+        <div id="noticias" class="tab-content" style="display: none;">
+            <h2 class="section-title">📰 POISK NEWS</h2>
+            <div class="news-grid">
+                {% for n in noticias_poisk[:12] %}
+                <div class="news-card">
+                    <div class="news-titulo">{{ n.titulo }}</div>
+                    <div class="news-meta">
+                        <span>{{ n.fonte }}</span>
+                        <span>{{ n.data }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-logo">🔍 POISK</div>
+            <div class="footer-copy">TODOS OS DIREITOS RESERVADOS 2026</div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).style.display = 'block';
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Criar requirements.txt
+fastapi
+uvicorn
+httpx
+jinja2
+python-multipart
+requests

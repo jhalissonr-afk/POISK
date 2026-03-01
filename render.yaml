@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: poisk
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn poisk_fastapi_robusto:app --host 0.0.0.0 --port $PORT

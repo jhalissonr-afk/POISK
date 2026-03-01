@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ ticker }} - POISK</title>
+    <style>
+        body { background: #0a0a0a; color: #fff; font-family: Arial; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: #1a1a1a; padding: 30px; border-radius: 10px; border-left: 4px solid #00ff88; }
+        a { color: #00ff88; text-decoration: none; }
+        .price { font-size: 3em; margin: 20px 0; }
+        .positive { color: #00ff88; }
+        .back { margin-bottom: 20px; display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back">← Voltar</a>
+        <div class="card">
+            <h1>{{ ticker }}</h1>
+            <div class="price">R$ {{ preco }}</div>
+            <div class="{{ 'positive' if variacao > 0 else 'negative' }}">
+                {{ variacao }}%
+            </div>
+            <div style="color: #888; margin-top: 20px;">{{ data }}</div>
+        </div>
+    </div>
+</body>
+</html>
