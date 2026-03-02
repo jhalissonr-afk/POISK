@@ -682,7 +682,253 @@ async def admin_panel(request: Request, username: str = Depends(verificar_admin)
     """
     
     return HTMLResponse(content=html)
+# ==================== ALGORITMO POISK ====================
 
+from app.algorithms.poisk_score import AlgoritmoPOISK
+import random
+
+# Instancia o algoritmo
+algoritmo_poisk = AlgoritmoPOISK()
+
+@app.get("/algoritmo", response_class=HTMLResponse)
+async def pagina_algoritmo(request: Request):
+    """Página do algoritmo POISK"""
+    
+    # Busca as ações que você já tem
+    acoes_com_score = []
+    
+    for acao in SOUTH_AMERICA[:8]:  # Pega as primeiras 8 ações
+        # Cria dados para o algoritmo
+        dados_acao = {
+            'ticker': acao['ticker'],
+            'nome': acao['nome'],
+            'variacao': round(random.uniform(-6, 8), 2),
+            'volume_num': random.randint(100000, 5000000),
+            'volume_medio_num': random.randint(500000, 2000000),
+            'rsi': random.randint(20, 80),
+            'dy_percent': round(random.uniform(2, 10), 2)
+        }
+        
+        # Aplica o algoritmo
+        score = algoritmo_poisk.calcular_score(dados_acao)
+        
+        acoes_com_score.append({
+            'ticker': acao['ticker'],
+            'nome': acao['nome'],
+            'score': score['score'],
+            'recomendacao': score['recomendacao'],
+            'cor': score['cor'],
+            'emoji': score['emoji'],
+            'criterios': score['criterios']
+        })
+    
+    # Ordena por score (melhores primeiro)
+    acoes_com_score.sort(key=lambda x: x['score'], reverse=True)
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>POISK Algoritmo</title>
+        <style>
+            * {{ margin:0; padding:0; box-sizing:border-box; }}
+            body {{
+                background: #0a0a0a;
+                color: #fff;
+                font-family: 'Segoe UI', sans-serif;
+                padding: 20px;
+            }}
+            .container {{ max-width: 1200px; margin:0 auto; }}
+            .header {{
+                background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+                padding: 30px;
+                border-radius: 15px;
+                margin-bottom: 30px;
+                border: 1px solid #333;
+                text-align: center;
+            }}
+            .logo {{
+                font-size: 3em;
+                font-weight: bold;
+                background: linear-gradient(45deg, #00ff88, #00ccff);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }}
+            .algoritmo-badge {{
+                background: #ffaa00;
+                color: #000;
+                padding: 5px 15px;
+                border-radius: 20px;
+                display: inline-block;
+                margin: 10px 0;
+            }}
+            .stats-grid {{
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                margin-bottom: 30px;
+            }}
+            .stat-card {{
+                background: #1a1a1a;
+                padding: 20px;
+                border-radius: 10px;
+                border-left: 4px solid #00ff88;
+                text-align: center;
+            }}
+            .cards-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }}
+            .card {{
+                background: #1a1a1a;
+                border-radius: 15px;
+                padding: 20px;
+                border: 1px solid #333;
+                transition: transform 0.3s;
+            }}
+            .card:hover {{
+                transform: translateY(-5px);
+                border-color: #00ff88;
+            }}
+            .card-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }}
+            .ticker {{
+                font-size: 1.5em;
+                font-weight: bold;
+                color: #00ff88;
+            }}
+            .score {{
+                font-size: 2.5em;
+                font-weight: bold;
+            }}
+            .recomendacao {{
+                font-size: 1.2em;
+                margin: 10px 0;
+            }}
+            .criterios {{
+                background: #2a2a2a;
+                padding: 15px;
+                border-radius: 8px;
+                margin-top: 15px;
+            }}
+            .criterio-item {{
+                padding: 5px 0;
+                border-bottom: 1px solid #444;
+                font-size: 0.9em;
+            }}
+            .footer {{
+                text-align: center;
+                color: #666;
+                margin-top: 40px;
+                padding: 20px;
+                border-top: 1px solid #333;
+            }}
+            .btn {{
+                background: #00ff88;
+                color: #000;
+                padding: 10px 20px;
+                text-decoration: none;
+                border-radius: 5px;
+                display: inline-block;
+                margin: 5px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🔍 POISK ALGORITMO</div>
+                <div class="algoritmo-badge">PROPRIETÁRIO v1.0</div>
+                <p style="color:#888;">Análise baseada em múltiplos critérios com pesos exclusivos</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div style="font-size:2em;">{len(acoes_com_score)}</div>
+                    <div>Ações Analisadas</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size:2em;">4</div>
+                    <div>Critérios de Análise</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size:2em;">1.382</div>
+                    <div>Fator POISK</div>
+                </div>
+            </div>
+            
+            <div style="text-align:center; margin:20px 0;">
+                <a href="/" class="btn">🌍 Ver Site</a>
+                <a href="/admin" class="btn">👑 Admin</a>
+            </div>
+            
+            <h2 style="color:#00ff88;">📊 RANKING POISK SCORE</h2>
+            
+            <div class="cards-grid">
+"""
+    
+    for acao in acoes_com_score:
+        html += f"""
+                <div class="card">
+                    <div class="card-header">
+                        <span class="ticker">{acao['ticker']}</span>
+                        <span style="color:{acao['cor']}; font-weight:bold;">{acao['emoji']} {acao['recomendacao']}</span>
+                    </div>
+                    <div class="card-nome">{acao['nome']}</div>
+                    <div class="score" style="color:{acao['cor']};">{acao['score']}</div>
+                    <div class="recomendacao" style="color:{acao['cor']};">{acao['recomendacao']}</div>
+                    
+                    <div class="criterios">
+                        <h4 style="color:#00ff88; margin-bottom:10px;">🔍 Análise:</h4>
+        """
+        
+        for criterio in acao['criterios']:
+            html += f'<div class="criterio-item">{criterio}</div>'
+        
+        html += """
+                    </div>
+                </div>
+        """
+    
+    html += f"""
+            </div>
+            
+            <div class="footer">
+                <p>POISK Score v1.0 - Algoritmo Proprietário</p>
+                <p style="font-size:0.8em;">© 2026 POISK Labs - Todos os direitos reservados</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return HTMLResponse(content=html)
+
+@app.get("/api/algoritmo/{ticker}")
+async def api_algoritmo(ticker: str):
+    """API do algoritmo para consultas individuais"""
+    
+    # Simula dados da ação
+    dados_acao = {
+        'ticker': ticker,
+        'variacao': round(random.uniform(-6, 8), 2),
+        'volume_num': random.randint(100000, 5000000),
+        'volume_medio_num': random.randint(500000, 2000000),
+        'rsi': random.randint(20, 80),
+        'dy_percent': round(random.uniform(2, 10), 2)
+    }
+    
+    # Aplica algoritmo
+    resultado = algoritmo_poisk.calcular_score(dados_acao)
+    resultado['ticker'] = ticker
+    
+    return resultado
 if __name__ == "__main__":
     import uvicorn
     print("="*80)
