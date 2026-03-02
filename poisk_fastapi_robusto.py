@@ -13,11 +13,6 @@ from typing import Optional, Dict, List, Any
 import json
 import secrets
 import hmac
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Float
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from jose import JWTError, jwt
-from passlib.context import CryptContext
 import os
 
 # ==================== CONFIGURAÇÕES BÁSICAS ====================
@@ -35,50 +30,84 @@ CACHE_TTL = 300  # 5 minutos
 cache = {}
 cache_tempo = {}
 
-# ==================== BANCO DE DADOS ====================
-import os
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Float
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+# ==================== BANCO DE DADOS (OPCIONAL) ====================
+from datetime import datetime
 
-# Pega a URL do banco da variável de ambiente, ou usa SQLite como fallback local
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./poisk.db")
+# Tenta importar SQLAlchemy, mas não quebra se não existir
+try:
+    from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Float
+    from sqlalchemy.ext.declarative import declarative_base
+    from sqlalchemy.orm import sessionmaker, Session
+    SQLALCHEMY_AVAILABLE = True
+    print("✅ SQLAlchemy encontrado. Banco de dados ATIVADO.")
+except ImportError as e:
+    SQLALCHEMY_AVAILABLE = False
+    print(f"⚠️ SQLAlchemy NÃO disponível: {e}. Banco de dados DESATIVADO.")
+    print("⚠️ O site continuará funcionando sem cadastro de usuários.")
 
-# Configura a conexão: PostgreSQL requer SSL, SQLite usa configuração local
-if DATABASE_URL.startswith("postgresql"):
-    # Para PostgreSQL no Render, precisamos de SSL
-    engine = create_engine(DATABASE_URL, connect_args={"sslmode": "require"})
-else:
-    # Para SQLite local (desenvolvimento)
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# ==================== CONFIGURAÇÃO DO BANCO (SÓ SE DISPONÍVEL) ====================
+if SQLALCHEMY_AVAILABLE:
+    # Pega a URL do banco da variável de ambiente
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./poisk.db")
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# Modelo de Usuário
-class Usuario(Base):
-    __tablename__ = "usuarios"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    senha_hash = Column(String)
-    assinante = Column(Boolean, default=False)
-    data_criacao = Column(DateTime, default=datetime.now)
-    ultimo_acesso = Column(DateTime, nullable=True)
-
-# Cria as tabelas
-Base.metadata.create_all(bind=engine)
-
-# Função para obter sessão do banco
-def get_db():
-    db = SessionLocal()
     try:
-        yield db
-    finally:
-        db.close()
+        if DATABASE_URL.startswith("postgresql"):
+            # Para PostgreSQL no Render, precisamos de SSL
+            engine = create_engine(DATABASE_URL, connect_args={"sslmode": "require"})
+            print("✅ Conectando ao PostgreSQL...")
+        else:
+            # Para SQLite local (desenvolvimento)
+            engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+            print("✅ Conectando ao SQLite local...")
+
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base = declarative_base()
+
+        # Modelo de Usuário
+        class Usuario(Base):
+            __tablename__ = "usuarios"
+            id = Column(Integer, primary_key=True, index=True)
+            username = Column(String, unique=True, index=True)
+            email = Column(String, unique=True, index=True)
+            senha_hash = Column(String)
+            assinante = Column(Boolean, default=False)
+            data_criacao = Column(DateTime, default=datetime.now)
+            ultimo_acesso = Column(DateTime, nullable=True)
+
+        # Cria as tabelas
+        Base.metadata.create_all(bind=engine)
+
+        # Função para obter sessão do banco
+        def get_db():
+            db = SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        print("✅ Banco de dados configurado com sucesso!")
+        BANCO_ATIVO = True
+
+    except Exception as e:
+        print(f"❌ Erro ao configurar banco de dados: {e}")
+        BANCO_ATIVO = False
+        SQLALCHEMY_AVAILABLE = False
+else:
+    BANCO_ATIVO = False
+
+# ==================== FUNÇÃO DE FALLBACK PARA QUANDO NÃO TEM BANCO ====================
+async def get_db_fallback():
+    """Retorna None quando o banco não está disponível"""
+    yield None
+    return
+
+# Decide qual função de banco usar
+get_db_actual = get_db if SQLALCHEMY_AVAILABLE and BANCO_ATIVO else get_db_fallback
 
 # ==================== SISTEMA DE AUTENTICAÇÃO ====================
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
 SECRET_KEY = "seu_segredo_super_forte_mude_isso_123"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -98,7 +127,13 @@ def criar_token_acesso(data: dict):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db_actual)):
+    if not SQLALCHEMY_AVAILABLE or not BANCO_ATIVO:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Banco de dados não disponível no momento",
+        )
+    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciais inválidas",
@@ -127,8 +162,16 @@ async def registrar(
     username: str,
     email: str,
     password: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_actual)
 ):
+    # Se não tem banco, retorna erro amigável
+    if not SQLALCHEMY_AVAILABLE or not BANCO_ATIVO:
+        return {
+            "msg": "Banco de dados não disponível no momento",
+            "status": "warning",
+            "dica": "O site continuará funcionando sem cadastro de usuários"
+        }
+    
     # Verifica se já existe
     if db.query(Usuario).filter(Usuario.username == username).first():
         raise HTTPException(status_code=400, detail="Usuário já existe")
@@ -151,8 +194,14 @@ async def registrar(
 @auth_router.post("/login")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_actual)
 ):
+    if not SQLALCHEMY_AVAILABLE or not BANCO_ATIVO:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Banco de dados não disponível no momento",
+        )
+    
     usuario = db.query(Usuario).filter(
         Usuario.username == form_data.username
     ).first()
@@ -190,6 +239,85 @@ async def me(current_user: Usuario = Depends(get_current_user)):
 
 # ==================== INCLUI AS ROTAS NO APP ====================
 app.include_router(auth_router)
+
+# ==================== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA ====================
+
+# Dados em tempo real (simulados)
+dados_tempo_real = {
+    'dolar': 5.85,
+    'bitcoin': 65432,
+    'ibovespa': 128500,
+    'sp500': 5200,
+    'nasdaq': 18500,
+    'nikkei': 38500,
+    'ultima_atualizacao': datetime.now()
+}
+
+def gerar_variacao():
+    return round(random.uniform(-2.5, 3.5), 2)
+
+def atualizar_dados_automatico():
+    global dados_tempo_real
+    
+    while True:
+        try:
+            dados_tempo_real['dolar'] = round(dados_tempo_real['dolar'] * (1 + random.uniform(-0.005, 0.005)), 2)
+            dados_tempo_real['bitcoin'] = round(dados_tempo_real['bitcoin'] * (1 + random.uniform(-0.02, 0.03)), 0)
+            dados_tempo_real['ibovespa'] = round(dados_tempo_real['ibovespa'] * (1 + random.uniform(-0.01, 0.015)), 0)
+            dados_tempo_real['sp500'] = round(dados_tempo_real['sp500'] * (1 + random.uniform(-0.008, 0.012)), 0)
+            dados_tempo_real['nasdaq'] = round(dados_tempo_real['nasdaq'] * (1 + random.uniform(-0.015, 0.02)), 0)
+            dados_tempo_real['nikkei'] = round(dados_tempo_real['nikkei'] * (1 + random.uniform(-0.012, 0.018)), 0)
+            
+            dados_tempo_real['ultima_atualizacao'] = datetime.now()
+            
+            print(f"🔄 Dados atualizados em: {dados_tempo_real['ultima_atualizacao'].strftime('%H:%M:%S')}")
+            print(f"   Dólar: R$ {dados_tempo_real['dolar']} | Bitcoin: ${dados_tempo_real['bitcoin']:,.0f}")
+            
+        except Exception as e:
+            print(f"Erro na atualização: {e}")
+        
+        time.sleep(60)
+
+# Inicia a thread de atualização automática
+thread_atualizacao = threading.Thread(target=atualizar_dados_automatico, daemon=True)
+thread_atualizacao.start()
+print("✅ Sistema de atualização automática iniciado (a cada 60 segundos)")
+
+# ==================== DADOS GLOBAIS ====================
+
+# AMÉRICA DO SUL
+SOUTH_AMERICA = [
+    {'ticker': 'PETR4.SA', 'nome': 'Petrobras', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Petróleo'},
+    {'ticker': 'VALE3.SA', 'nome': 'Vale', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Mineração'},
+    {'ticker': 'ITUB4.SA', 'nome': 'Itaú', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bancário'},
+    {'ticker': 'BBDC4.SA', 'nome': 'Bradesco', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bancário'},
+    {'ticker': 'ABEV3.SA', 'nome': 'Ambev', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bebidas'},
+    {'ticker': 'WEGE3.SA', 'nome': 'WEG', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Industrial'},
+    {'ticker': 'BBAS3.SA', 'nome': 'Banco do Brasil', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bancário'},
+    {'ticker': 'AAPL', 'nome': 'Apple', 'pais': 'EUA', 'bandeira': '🇺🇸', 'setor': 'Tecnologia'},
+    {'ticker': 'MSFT', 'nome': 'Microsoft', 'pais': 'EUA', 'bandeira': '🇺🇸', 'setor': 'Tecnologia'},
+]
+
+# ==================== FUNÇÕES AUXILIARES ====================
+
+def enriquecer_dados(ativos):
+    enriquecidos = []
+    for ativo in ativos:
+        seed = hash(ativo['ticker']) % 1000
+        preco_base = 10 + (seed % 490)
+        variacao = gerar_variacao()
+        preco_atual = round(preco_base * (1 + variacao/100), 2)
+        
+        ativo['preco'] = preco_atual
+        ativo['variacao'] = variacao
+        ativo['variacao_class'] = 'positive' if variacao > 0 else 'negative'
+        ativo['min_52'] = round(preco_base * 0.85, 2)
+        ativo['max_52'] = round(preco_base * 1.25, 2)
+        ativo['volume'] = f"{round(random.uniform(1, 50), 1)}M"
+        ativo['dy'] = f"{round(random.uniform(2, 8), 1)}%"
+        ativo['pvp'] = round(random.uniform(0.8, 1.3), 2)
+        enriquecidos.append(ativo)
+    return enriquecidos
 
 # ==================== ALGORITMO POISK SCORE ====================
 
@@ -300,85 +428,6 @@ class AlgoritmoPOISK:
 
 # Instancia o algoritmo
 algoritmo_poisk = AlgoritmoPOISK()
-
-# ==================== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA ====================
-
-# Dados em tempo real (simulados)
-dados_tempo_real = {
-    'dolar': 5.85,
-    'bitcoin': 65432,
-    'ibovespa': 128500,
-    'sp500': 5200,
-    'nasdaq': 18500,
-    'nikkei': 38500,
-    'ultima_atualizacao': datetime.now()
-}
-
-def gerar_variacao():
-    return round(random.uniform(-2.5, 3.5), 2)
-
-def atualizar_dados_automatico():
-    global dados_tempo_real
-    
-    while True:
-        try:
-            dados_tempo_real['dolar'] = round(dados_tempo_real['dolar'] * (1 + random.uniform(-0.005, 0.005)), 2)
-            dados_tempo_real['bitcoin'] = round(dados_tempo_real['bitcoin'] * (1 + random.uniform(-0.02, 0.03)), 0)
-            dados_tempo_real['ibovespa'] = round(dados_tempo_real['ibovespa'] * (1 + random.uniform(-0.01, 0.015)), 0)
-            dados_tempo_real['sp500'] = round(dados_tempo_real['sp500'] * (1 + random.uniform(-0.008, 0.012)), 0)
-            dados_tempo_real['nasdaq'] = round(dados_tempo_real['nasdaq'] * (1 + random.uniform(-0.015, 0.02)), 0)
-            dados_tempo_real['nikkei'] = round(dados_tempo_real['nikkei'] * (1 + random.uniform(-0.012, 0.018)), 0)
-            
-            dados_tempo_real['ultima_atualizacao'] = datetime.now()
-            
-            print(f"🔄 Dados atualizados em: {dados_tempo_real['ultima_atualizacao'].strftime('%H:%M:%S')}")
-            print(f"   Dólar: R$ {dados_tempo_real['dolar']} | Bitcoin: ${dados_tempo_real['bitcoin']:,.0f}")
-            
-        except Exception as e:
-            print(f"Erro na atualização: {e}")
-        
-        time.sleep(60)
-
-# Inicia a thread de atualização automática
-thread_atualizacao = threading.Thread(target=atualizar_dados_automatico, daemon=True)
-thread_atualizacao.start()
-print("✅ Sistema de atualização automática iniciado (a cada 60 segundos)")
-
-# ==================== DADOS GLOBAIS ====================
-
-# AMÉRICA DO SUL
-SOUTH_AMERICA = [
-    {'ticker': 'PETR4.SA', 'nome': 'Petrobras', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Petróleo'},
-    {'ticker': 'VALE3.SA', 'nome': 'Vale', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Mineração'},
-    {'ticker': 'ITUB4.SA', 'nome': 'Itaú', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bancário'},
-    {'ticker': 'BBDC4.SA', 'nome': 'Bradesco', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bancário'},
-    {'ticker': 'ABEV3.SA', 'nome': 'Ambev', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bebidas'},
-    {'ticker': 'WEGE3.SA', 'nome': 'WEG', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Industrial'},
-    {'ticker': 'BBAS3.SA', 'nome': 'Banco do Brasil', 'pais': 'Brasil', 'bandeira': '🇧🇷', 'setor': 'Bancário'},
-    {'ticker': 'AAPL', 'nome': 'Apple', 'pais': 'EUA', 'bandeira': '🇺🇸', 'setor': 'Tecnologia'},
-    {'ticker': 'MSFT', 'nome': 'Microsoft', 'pais': 'EUA', 'bandeira': '🇺🇸', 'setor': 'Tecnologia'},
-]
-
-# ==================== FUNÇÕES AUXILIARES ====================
-
-def enriquecer_dados(ativos):
-    enriquecidos = []
-    for ativo in ativos:
-        seed = hash(ativo['ticker']) % 1000
-        preco_base = 10 + (seed % 490)
-        variacao = gerar_variacao()
-        preco_atual = round(preco_base * (1 + variacao/100), 2)
-        
-        ativo['preco'] = preco_atual
-        ativo['variacao'] = variacao
-        ativo['variacao_class'] = 'positive' if variacao > 0 else 'negative'
-        ativo['min_52'] = round(preco_base * 0.85, 2)
-        ativo['max_52'] = round(preco_base * 1.25, 2)
-        ativo['volume'] = f"{round(random.uniform(1, 50), 1)}M"
-        ativo['dy'] = f"{round(random.uniform(2, 8), 1)}%"
-        ativo['pvp'] = round(random.uniform(0.8, 1.3), 2)
-        enriquecidos.append(ativo)
-    return enriquecidos
 
 # ==================== ROTAS PRINCIPAIS ====================
 
@@ -558,6 +607,7 @@ async def admin_panel(request: Request, username: str = Depends(verificar_admin)
                 <p>Dólar: R$ {stats['dados_tempo_real']['dolar']:.2f}</p>
                 <p>Bitcoin: $ {stats['dados_tempo_real']['bitcoin']:,.0f}</p>
                 <p>Última atualização: {stats['dados_tempo_real']['ultima_atualizacao']}</p>
+                <p>Banco de dados: {'✅ ATIVO' if SQLALCHEMY_AVAILABLE and BANCO_ATIVO else '⚠️ DESATIVADO'}</p>
                 <a href="/" class="btn">🌍 Ver Site</a>
                 <a href="/algoritmo" class="btn">🤖 Algoritmo</a>
             </div>
@@ -578,6 +628,7 @@ if __name__ == "__main__":
     print("🌎 Países: 42")
     print("📰 Notícias: 50+")
     print("⚡ Atualização automática: a cada 60 segundos")
+    print(f"💾 Banco de dados: {'✅ ATIVO' if SQLALCHEMY_AVAILABLE and BANCO_ATIVO else '⚠️ DESATIVADO'}")
     print("📱 Site: http://localhost:8000")
     print("📚 Documentação: http://localhost:8000/docs")
     print("="*80)
