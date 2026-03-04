@@ -5,6 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POISK GLOBAL - Investimentos Mundiais</title>
     <style>
+
+<style>
+    /* ... outros estilos ... */
+    
+    .logo {
+        font-size: 5em;
+        font-weight: 900;
+        position: relative;
+        display: inline-block;
+        text-transform: uppercase;
+        letter-spacing: 8px;
+        background: linear-gradient(90deg, #00ff88, #00ccff, #0066ff, #aa00ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 
+            0 0 20px rgba(0,255,136,0.3),
+            0 0 40px rgba(0,204,255,0.2),
+            0 0 60px rgba(170,0,255,0.1);
+        animation: neonPulse 2s ease-in-out infinite, float3d 3s ease-in-out infinite;
+        transform-style: preserve-3d;
+    }
+
+    @keyframes neonPulse {
+        0%, 100% {
+            text-shadow: 
+                0 0 20px rgba(0,255,136,0.3),
+                0 0 40px rgba(0,204,255,0.2),
+                0 0 60px rgba(170,0,255,0.1);
+        }
+        50% {
+            text-shadow: 
+                0 0 30px rgba(0,255,136,0.6),
+                0 0 60px rgba(0,204,255,0.4),
+                0 0 90px rgba(170,0,255,0.3);
+        }
+    }
+
+    @keyframes float3d {
+        0%, 100% {
+            transform: perspective(500px) rotateX(0deg) rotateY(0deg);
+        }
+        25% {
+            transform: perspective(500px) rotateX(5deg) rotateY(5deg);
+        }
+        50% {
+            transform: perspective(500px) rotateX(0deg) rotateY(10deg);
+        }
+        75% {
+            transform: perspective(500px) rotateX(-5deg) rotateY(5deg);
+        }
+    }
+    
+    /* ... resto dos estilos ... */
+</style>
         * {
             margin: 0;
             padding: 0;
